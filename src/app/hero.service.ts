@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 import { Hero } from './hero';
-//import { HEROES } from './mock-heroes';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { MessageService } from './message.service';
@@ -16,7 +15,11 @@ const httpOptions = {
 })
 export class HeroService {
   private heroesUrl = 'api/heroes'; //URL to web api
-  
+
+  constructor(
+    private http: HttpClient,
+    private messageService: MessageService
+  ) { }
 
   getHero(id: number): Observable<Hero> {
     const url = `${this.heroesUrl}/${id}`;
@@ -35,6 +38,21 @@ export class HeroService {
         catchError(this.handleError('getHeroes', []))
       );
   }
+
+  /** GET hero by id. Return `undefined` when id not found */
+  getHeroNo404<Data>(id: number): Observable<Hero> {
+    const url = `${this.heroesUrl}/?id=${id}`;
+    return this.http.get<Hero[]>(url)
+      .pipe(
+        map(heroes => heroes[0]), // returns a {0|1} element array
+        tap(h => {
+          const outcome = h ? `fetched` : `did not find`;
+          this.log(`${outcome} hero id=${id}`);
+        }),
+        catchError(this.handleError<Hero>(`getHero id=${id}`))
+      );
+  }
+
 
   updateHero (hero: Hero): Observable<any> {
     return this.http.put(this.heroesUrl, hero, httpOptions).pipe(
@@ -71,11 +89,7 @@ export class HeroService {
           catchError(this.handleError<Hero[]>('searchHeroes', []))
         );
   }
-
-  private log(message: string) {
-    this.messageService.add(`HeroService: ${message}`);
-  }
-
+  
   /**
    * Handle Http operation that failed.
    * Let the app continue.
@@ -95,9 +109,9 @@ export class HeroService {
       return of(result as T);
     };
   }
+  
+  private log(message: string) {
+    this.messageService.add(`HeroService: ${message}`);
+  }
 
-  constructor(
-    private http: HttpClient,
-    private messageService: MessageService
-  ) { }
 }
